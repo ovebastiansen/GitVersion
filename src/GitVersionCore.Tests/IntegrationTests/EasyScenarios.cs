@@ -110,9 +110,11 @@ namespace GitVersionCore.Tests.IntegrationTests
             fixture.Repository.MakeACommit();
             fixture.AssertFullSemver(config, "1.26.1-on-release-branch.1+2");
 
-            fixture.Checkout("release/1.26");
-            fixture.Repository.MergeNoFF("hotfix/on-release-branch");
+            var commit = fixture.Repository.CreatePullRequestRef("hotfix/on-release-branch", "release/1.26", normalise: true);
 
+            fixture.AssertFullSemver(config, "1.27.0-PullRequest0002.3"); //where did 27 come from
+            fixture.Checkout("release/1.26");
+            fixture.Repository.Merge(commit, new Signature("test", "test@test.no", DateTimeOffset.UtcNow));
             fixture.AssertFullSemver(config, "1.26.0+4");
         }
 
@@ -136,6 +138,13 @@ namespace GitVersionCore.Tests.IntegrationTests
             fixture.Checkout("bugfix/on-master");
             fixture.Repository.MakeACommit();
             fixture.AssertFullSemver(config, "1.27.0-on-master.1+2");
+
+            var commit = fixture.Repository.CreatePullRequestRef("bugfix/on-master", "master", normalise: true);
+
+            fixture.AssertFullSemver(config, "1.27.0-PullRequest0002.3");
+            fixture.Checkout("master");
+            fixture.Repository.Merge(commit, new Signature("test", "test@test.no", DateTimeOffset.UtcNow));
+            fixture.AssertFullSemver(config, "1.27.0-beta.1+3");
         }
 
         [Test]
@@ -156,7 +165,6 @@ namespace GitVersionCore.Tests.IntegrationTests
 
             var commit = fixture.Repository.CreatePullRequestRef("feature/some-new-feature", "master", normalise: true);
 
-            fixture.Repository.DumpGraph();
             fixture.AssertFullSemver(config, "1.27.0-PullRequest0002.8");
             fixture.Checkout("master");
             fixture.Repository.Merge(commit, new Signature("test", "test@test.no", DateTimeOffset.UtcNow));
