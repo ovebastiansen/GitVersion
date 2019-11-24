@@ -1,11 +1,13 @@
 namespace GitVersionCore.Tests.IntegrationTests
 {
+    using System;
     using System.Collections.Generic;
     using GitTools.Testing;
     using GitVersion;
     using GitVersion.Configuration;
     using LibGit2Sharp;
     using NUnit.Framework;
+    using GitVersion.Extensions;
 
     [TestFixture]
     public class EasyScenarios : TestBase
@@ -47,7 +49,13 @@ namespace GitVersionCore.Tests.IntegrationTests
                         Regex = "^hotfix(es)?[/-]",
                         TracksReleaseBranches = true,
                     }
-                }
+                },
+                //{ "pull-request", new BranchConfig
+                //    {
+                //        Tag = "PullRequest",
+                //        Regex = "^(pull|pull\\-requests|pr)[/-]"
+                //    }
+                //}
             }
         };
 
@@ -141,19 +149,18 @@ namespace GitVersionCore.Tests.IntegrationTests
             fixture.Repository.CreateBranch("feature/some-new-feature");
 
             fixture.Checkout("master");
-            fixture.Repository.MakeACommit();
-            fixture.Repository.MakeACommit();
-            fixture.Repository.MakeACommit();
-            fixture.Repository.MakeACommit();
+            fixture.Repository.MakeCommits(4);
 
             fixture.Checkout("feature/some-new-feature");
-            fixture.Repository.MakeACommit();
-            fixture.Repository.MakeACommit();
+            fixture.Repository.MakeCommits(3);
 
+            var commit = fixture.Repository.CreatePullRequestRef("feature/some-new-feature", "master", normalise: true);
+
+            fixture.Repository.DumpGraph();
+            fixture.AssertFullSemver(config, "1.27.0-PullRequest0002.8");
             fixture.Checkout("master");
-            fixture.Repository.MergeNoFF("feature/some-new-feature");
-
-            fixture.AssertFullSemver(config, "1.27.0-beta.1+7");
+            fixture.Repository.Merge(commit, new Signature("test", "test@test.no", DateTimeOffset.UtcNow));
+            fixture.AssertFullSemver(config, "1.27.0-beta.1+8");
         }
 
         [Test]
