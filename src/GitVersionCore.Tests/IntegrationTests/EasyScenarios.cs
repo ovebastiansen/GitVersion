@@ -12,7 +12,6 @@ namespace GitVersionCore.Tests.IntegrationTests
     {
         static Config config = new Config
         {
-            //VersioningMode = VersioningMode.ContinuousDeployment,
             Branches =
             {
                 { "master", new BranchConfig
@@ -26,7 +25,7 @@ namespace GitVersionCore.Tests.IntegrationTests
                 { "release", new BranchConfig
                     {
                         Tag = "",
-                        Regex = "^releases?[/-]"
+                        Regex = "^releases?[/-]",
                     }
                 },
                 { "feature", new BranchConfig
@@ -39,7 +38,14 @@ namespace GitVersionCore.Tests.IntegrationTests
                     {
                         Tag = "useBranchName",
                         Regex = "^bugfix(es)?[/-]",
-                        SourceBranches = new List<string> { "master", "release" }
+                        SourceBranches = new List<string> { "master" },
+                    }
+                },
+                { "hotfix", new BranchConfig
+                    {
+                        Tag = "useBranchName",
+                        Regex = "^hotfix(es)?[/-]",
+                        TracksReleaseBranches = true,
                     }
                 }
             }
@@ -86,18 +92,18 @@ namespace GitVersionCore.Tests.IntegrationTests
             fixture.Checkout("release/1.26");
             fixture.Repository.MakeACommit();
             fixture.AssertFullSemver(config, "1.26.0+1");
-            fixture.ApplyTag("1.26");
+            //fixture.ApplyTag("1.26");
 
-            fixture.Repository.CreateBranch("bugfix/on-release-branch");
-            fixture.Checkout("bugfix/on-release-branch");
+            fixture.Repository.CreateBranch("hotfix/on-release-branch");
+            fixture.Checkout("hotfix/on-release-branch");
             fixture.Repository.MakeACommit();
-            fixture.AssertFullSemver(config, "1.26.0-on-release-branch.1+1");
+            fixture.AssertFullSemver(config, "1.26.1-on-release-branch.1+1");
 
             fixture.Repository.MakeACommit();
-            fixture.AssertFullSemver(config, "1.26.0-on-release-branch.1+2");
+            fixture.AssertFullSemver(config, "1.26.1-on-release-branch.1+2");
 
             fixture.Checkout("release/1.26");
-            fixture.Repository.MergeNoFF("bugfix/on-release-branch");
+            fixture.Repository.MergeNoFF("hotfix/on-release-branch");
 
             fixture.AssertFullSemver(config, "1.26.0+4");
         }
@@ -110,10 +116,11 @@ namespace GitVersionCore.Tests.IntegrationTests
 
             fixture.Repository.CreateBranch("release/1.26");
             fixture.Checkout("release/1.26");
-            fixture.ApplyTag("1.26");
+            fixture.AssertFullSemver(config, "1.26.0+0");
+            //fixture.ApplyTag("1.26");
 
             fixture.Checkout("master");
-            fixture.AssertFullSemver(config, "1.26.0");
+            //fixture.AssertFullSemver(config, "1.26.0");
             fixture.Repository.MakeACommit();
             fixture.AssertFullSemver(config, "1.27.0-beta.1+1");
 
