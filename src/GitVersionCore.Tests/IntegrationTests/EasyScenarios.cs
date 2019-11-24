@@ -95,27 +95,41 @@ namespace GitVersionCore.Tests.IntegrationTests
         {
             using var fixture = new EmptyRepositoryFixture();
             fixture.Repository.MakeACommit();
+            fixture.AssertFullSemver(config, "0.1.0-beta.1+0");
 
             fixture.Repository.CreateBranch("release/1.26");
+            fixture.Repository.MakeACommit(); //to make sure master runs with 27 at this time
+            fixture.AssertFullSemver(config, "1.27.0-beta.1+1");
             fixture.Checkout("release/1.26");
+
+            fixture.AssertFullSemver(config, "1.26.0+0");
             fixture.Repository.MakeACommit();
             fixture.AssertFullSemver(config, "1.26.0+1");
-            //fixture.ApplyTag("1.26");
-
+            
             fixture.Repository.CreateBranch("hotfix/on-release-branch");
             fixture.Checkout("hotfix/on-release-branch");
             fixture.Repository.MakeACommit();
-            fixture.AssertFullSemver(config, "1.26.1-on-release-branch.1+1");
+            fixture.AssertFullSemver(config, "1.26.1-on-release-branch.1+1"); //why 1.26.1, with patch=1 only on hotfix and not when returning into release branch
 
             fixture.Repository.MakeACommit();
             fixture.AssertFullSemver(config, "1.26.1-on-release-branch.1+2");
 
             var commit = fixture.Repository.CreatePullRequestRef("hotfix/on-release-branch", "release/1.26", normalise: true);
 
-            fixture.AssertFullSemver(config, "1.27.0-PullRequest0002.3"); //where did 27 come from
+            fixture.AssertFullSemver(config, "1.27.0-PullRequest0002.3"); //where did 27 come from?
             fixture.Checkout("release/1.26");
-            fixture.Repository.Merge(commit, new Signature("test", "test@test.no", DateTimeOffset.UtcNow));
+            fixture.Repository.Merge(commit, Generate.SignatureNow());
             fixture.AssertFullSemver(config, "1.26.0+4");
+
+            Commands.Checkout(fixture.Repository, fixture.Repository.CreateBranch("merge/1-26-to-master"));
+            fixture.AssertFullSemver(config, "0.1.0-merge-1-26-to-master.1+4");
+
+            var backToMasterCommit = fixture.Repository.CreatePullRequestRef("merge/1-26-to-master", "master", 3, normalise: true);
+            fixture.AssertFullSemver(config, "0.1.0-PullRequest0003.6");
+
+            fixture.Checkout("master");
+            fixture.Repository.Merge(commit, Generate.SignatureNow());
+            fixture.AssertFullSemver(config, "1.27.0-beta.1+6");
         }
 
         [Test]
@@ -143,7 +157,7 @@ namespace GitVersionCore.Tests.IntegrationTests
 
             fixture.AssertFullSemver(config, "1.27.0-PullRequest0002.3");
             fixture.Checkout("master");
-            fixture.Repository.Merge(commit, new Signature("test", "test@test.no", DateTimeOffset.UtcNow));
+            fixture.Repository.Merge(commit, Generate.SignatureNow());
             fixture.AssertFullSemver(config, "1.27.0-beta.1+3");
         }
 
@@ -167,7 +181,7 @@ namespace GitVersionCore.Tests.IntegrationTests
 
             fixture.AssertFullSemver(config, "1.27.0-PullRequest0002.8");
             fixture.Checkout("master");
-            fixture.Repository.Merge(commit, new Signature("test", "test@test.no", DateTimeOffset.UtcNow));
+            fixture.Repository.Merge(commit, Generate.SignatureNow());
             fixture.AssertFullSemver(config, "1.27.0-beta.1+8");
         }
 
@@ -208,10 +222,17 @@ namespace GitVersionCore.Tests.IntegrationTests
         {
             using var fixture = new EmptyRepositoryFixture();
             fixture.Repository.MakeACommit();
+            fixture.AssertFullSemver(config, "0.1.0-beta.1+0");
+
             fixture.Repository.CreateBranch("release/1.26");
             fixture.Checkout("release/1.26");
 
             fixture.AssertFullSemver(config, "1.26.0+0");
+
+            fixture.Checkout("master");
+            fixture.AssertFullSemver(config, "0.1.0-beta.1+0");
+            fixture.Repository.MakeACommit();
+            fixture.AssertFullSemver(config, "1.27.0-beta.1+1");
         }
 
         [Test]
